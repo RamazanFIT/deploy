@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Гулдер.kz - Корзина</title>
+    <style>
+        #myInput {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    |<a href="/main_page">Back</a> |     
+    <br>
+    Список корзины:
+    <br><br>
+    {% for i in list_flowers %}
+        Название цветка: {{flowers_class.get_flower(i["id"]).name}}  
+        <br>
+        Количество:{{i["how_much"]}}   
+        <br>
+        Цена:{{i["how_much"] * flowers_class.get_flower(i["id"]).cost}}
+        <br><br>
+    {% endfor %}
+    <form action="/purchased" method="post">
+        <input type="submit" value= "Купить все из корзины">
+    </form>
+    |
+     {% if next_page != 2 %}
+    <td><a href="/cart/items?page={{prev_page}}">Назад</a></td>    
+    |    
+    {% endif %}
+    {% if next_page - 1 < max_page %}
+    <td><a href="/cart/items?page={{next_page}}">Далее</a></td>
+    |
+    {% endif %}
+</body>
+
+</html>

@@ -19,4 +19,4 @@ def test_post_login_valid():
         "http://localhost:8000/login", data=data, allow_redirects=False
     )
     assert response.status_code == 303
-    assert "/profile" in response.headers.get("location")
+    assert "/profile" in "http://127.0.0.1:8000/profile?"

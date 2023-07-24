@@ -14,7 +14,7 @@ class FlowersRepository:
 
     def __init__(self):
         self.flowers = []
-        self.id = 1
+        self.id = 0
 
     def add_flower(self, flower : Flower) -> bool:
         self.flowers.append(flower)
@@ -52,5 +52,11 @@ class FlowersRepository:
             if self.flowers[i].id == id:
                 return self.flowers[i]
         return None
-
+    def dict(self, flower : Flower):
+        return{
+            "name": flower.name,
+            "count": flower.count,
+            "cost": flower.cost,
+            "id": flower.id
+        }
     

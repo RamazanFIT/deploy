@@ -1,8 +1,7 @@
-from attrs import define
 import jwt
+from pydantic import BaseModel
 
-@define
-class User:
+class User(BaseModel):
     email: str
     name : str
     surname : str
@@ -20,7 +19,7 @@ class UsersRepository:
         self.users.append(user)
         return True
     
-    def create_user(self, email, name, surname, password) -> User:
+    def create_user(self, email, name, surname, password, id) -> User:
         self.new_id += 1
         user = User(email=email, name=name, surname=surname, id=self.new_id, password=password)
         return user
@@ -30,7 +29,7 @@ class UsersRepository:
             if self.users[i].email == email:
                 return self.users[i]
         return None
-    
+        
     def encode_email(self, email):
         key = "Ramazan_the_best"
         algorithm = "HS256"
@@ -42,3 +41,4 @@ class UsersRepository:
         algorithm = "HS256"
         email = jwt.decode(jwt=token, key=key, algorithms=algorithm)
         return email
+                                                                                                                                                                                                                                                                                                    

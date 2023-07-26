@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from attrs import define
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import Session, relationship
-from database import Base
+from .database import Base
 
 class UserRequest(BaseModel):
     email: str

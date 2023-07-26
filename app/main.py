@@ -1,12 +1,12 @@
 from fastapi import Cookie, FastAPI, Form, Request, Response, templating, HTTPException, Depends
 from fastapi.responses import RedirectResponse
-from flowers_repository import Flowers, FlowersRepository, FlowerRequest
-from purchases_repository import Purchase, PurchasesRepository
-from users_repository import UserRequest, UsersRepository, UserResponse
+from .flowers_repository import Flowers, FlowersRepository, FlowerRequest
+from .purchases_repository import Purchase, PurchasesRepository
+from .users_repository import UserRequest, UsersRepository, UserResponse
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from database import SessionLocal, Base, engine
+from .database import SessionLocal, Base, engine
 
 Base.metadata.create_all(bind=engine)
 

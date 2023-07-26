@@ -17,6 +17,7 @@ attrs = "^23.1.0"
 pyjwt = "^2.8.0"
 sqlalchemy = "^2.0.19"
 alembic = "^1.11.1"
+docker = "^6.1.3"
                                                                                                                                                                                                                                                                   
 
 

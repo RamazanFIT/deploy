@@ -2,7 +2,7 @@ from attrs import define
 import json
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import Session, relationship
-from database import Base
+from .database import Base
 from pydantic import BaseModel
 
 class FlowerRequest(BaseModel):

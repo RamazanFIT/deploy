@@ -1,9 +1,9 @@
 from attrs import define
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import Session, relationship
-from database import Base
+from .database import Base
 from pydantic import BaseModel
-from flowers_repository import FlowersRepository
+from .flowers_repository import FlowersRepository
 
 flower_repo = FlowersRepository()
 class Purchase(Base):

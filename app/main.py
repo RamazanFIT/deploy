@@ -1,10 +1,14 @@
 from fastapi import Cookie, FastAPI, Form, Request, Response, templating, HTTPException, Depends
 from fastapi.responses import RedirectResponse
-from flowers_repository import Flower, FlowersRepository
+from flowers_repository import Flowers, FlowersRepository, FlowerRequest
 from purchases_repository import Purchase, PurchasesRepository
-from users_repository import User, UsersRepository
+from users_repository import UserRequest, UsersRepository, UserResponse
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from database import SessionLocal, Base, engine
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -14,55 +18,59 @@ flowers_repository = FlowersRepository()
 purchases_repository = PurchasesRepository()
 users_repository = UsersRepository()
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        
 
-@app.post("/signup")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+@app.post("/signup", response_model=UserResponse)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 def signup_save(
-    user : User
+    user : UserRequest,
+    db : Session = Depends(get_db)
     ):
-    user = user.dict()
     user = users_repository.create_user(
-        **user
+        db, user
     )
-    users_repository.add_user(user)
     return user
     
 @app.post("/login")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 def login(
     response : Response,
     username : str = Form(),
-    password : str = Form()
+    password : str = Form(),
+    db : Session = Depends(get_db)
     ):
-    tmp = users_repository.get_user_by_email(username)
+    tmp = users_repository.get_user_by_email(db, username)
     if tmp != None and tmp.password == password:
         shifr_email = users_repository.encode_email(username)
         return {'access_token': shifr_email, 'type': 'bearer'}
     raise HTTPException(status_code=401, detail="Incorrect login or password")
 
-@app.get("/profile")
+@app.get("/profile", response_model=UserResponse)
 def profile(
-    token : str = Depends(oauth2_scheme)
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
+    user = users_repository.get_user_by_email(db, email["email"])
     if user != None:
-        return user.dict()
+        return user
     raise HTTPException(status_code=401, detail="Not authorized")
 
 
 @app.post("/flowers")
 def add_flowers(
-    name : str = Form(),
-    count : str = Form(),
-    cost : str = Form(),
-    token : str = Depends(oauth2_scheme)
+    flower : FlowerRequest,
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
+    user = users_repository.get_user_by_email(db, email["email"])
     if user != None:
-        count = int(count)
-        cost = int(cost)
-        flower = flowers_repository.create_flower(name=name, count=count, cost=cost)
-        flowers_repository.add_flower(flower)
+        flower = flowers_repository.add_flower(db, flower)
         return {
             "flower_id" : flower.id
         }
@@ -71,21 +79,45 @@ def add_flowers(
     
 @app.get("/flowers")
 def shop(
-    token : str = Depends(oauth2_scheme)
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
+    user = users_repository.get_user_by_email(db, email["email"])
     if user != None:
-        flowers = flowers_repository.get_all_flowers()
-        # return flowers 
-        flowerss = []
-        for i in flowers:
-            flowerss.append(flowers_repository.dict(i))
-        return flowerss
-        
+        flowers = flowers_repository.get_all_flowers(db=db)
+        return flowers
     raise HTTPException(status_code=401, detail="Not authorized")
     
-    
+@app.delete("/flowers/{flower_id}")
+def del_flower(
+    flower_id : int,
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
+):
+    email = users_repository.decode_token(token)
+    user = users_repository.get_user_by_email(db, email["email"])
+    if user != None:
+        flowers_repository.delete_flower(db, flower_id)
+        return {
+            "deleted_flower_id" : flower_id
+        }
+    raise HTTPException(status_code=401, detail="Not authorized")
+
+@app.patch("/flowers/{flower_id}")
+def change_flower(
+    flower_id : int,
+    new_flower : FlowerRequest,
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
+):
+    email = users_repository.decode_token(token)
+    user = users_repository.get_user_by_email(db, email["email"])
+    if user != None:
+        flowers_repository.update_flower(db, flower_id, new_flower)
+        return Response("Succeessfully updated")
+        
+    raise HTTPException(status_code=401, detail="Not authorized")
     
 
 @app.post("/cart/items")
@@ -94,10 +126,11 @@ def cart_items(
     id : int = Form(),
     how_much : int = Form(),
     cart : str = Cookie(default="[]"),
-    token : str = Depends(oauth2_scheme)
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
+    user = users_repository.get_user_by_email(db, email["email"])
     if user != None:
         some_dict = flowers_repository.create_dict(id, how_much)
         list_ = flowers_repository.get_python_code(cart)
@@ -110,7 +143,7 @@ def cart_items(
                     list_[i]["how_much"] += how_much
         else:
             list_.append(some_dict)
-        flowers_repository.change_cnt(id, how_much)
+        flowers_repository.change_cnt(db, id, how_much)
         json_str = flowers_repository.get_json_str(list_)
         ans = Response()
         ans.set_cookie("cart", json_str)
@@ -119,12 +152,12 @@ def cart_items(
 
 @app.get("/cart/items")
 def cart_items(
-    request : Request,
     cart : str = Cookie(default="[]"),
-    token : str = Depends(oauth2_scheme)
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
+    user = users_repository.get_user_by_email(db, email["email"])
     if user != None:
         list_flowers = flowers_repository.get_python_code(cart)
         cartt = []
@@ -132,9 +165,9 @@ def cart_items(
         for i in list_flowers:
             cartt.append(
                 {
-                    "Name of Flower" : flowers_repository.get_flower(i["id"]).name,
+                    "Name of Flower" : flowers_repository.get_flower(db, i["id"]).name,
                     "Count" : i["how_much"],
-                    "Cost" : i["how_much"] * flowers_repository.get_flower(i["id"]).cost
+                    "Cost" : i["how_much"] * flowers_repository.get_flower(db, i["id"]).cost
                 }
             )
             total_cost += cartt[-1]["Cost"]
@@ -145,12 +178,12 @@ def cart_items(
 def purchased(
     response : Response,
     cart : str = Cookie(default="[]"),
-    token : str = Depends(oauth2_scheme)
+    token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
-    list_flowers = flowers_repository.get_python_code(cart)
-    purchases_repository.add_purchase(list_flowers, user.id)
+    user = users_repository.get_user_by_email(db, email["email"])
+    purchases_repository.add_purchase(db, cart, user.id)
     ans = Response()
     ans.set_cookie("cart", "[]")
     return ans
@@ -159,18 +192,19 @@ def purchased(
 def purchased(
     request : Request,
     token : str = Depends(oauth2_scheme),
+    db : Session = Depends(get_db)
 ):
     email = users_repository.decode_token(token)
-    user = users_repository.get_user_by_email(email["email"])
-    list_purch = purchases_repository.get_user_purchases(user.id)
+    user = users_repository.get_user_by_email(db, email["email"])
+    list_purch = flowers_repository.get_python_code(purchases_repository.get_user_purchases(db, user.id).flowers)
     
     purch = []
     for i in list_purch:
         purch.append(
             {
-                "Name of the Flower" : flowers_repository.get_flower(i["id"]).name,
+                "Name of the Flower" : flowers_repository.get_flower(db, i["id"]).name,
                 "Count" : i["how_much"],
-                "Cost" : i["how_much"] * flowers_repository.get_flower(i["id"]).cost
+                "Cost" : i["how_much"] * flowers_repository.get_flower(db, i["id"]).cost
             }
         )
     return purch
